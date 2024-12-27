@@ -3,15 +3,13 @@ package com.example.passwordpage
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import com.example.passwordpage.ui.theme.PasswordPageTheme
+import androidx.activity.enableEdgeToEdge
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent {
-            PasswordPageTheme {
-                MainPage()
-            }
-        }
+        enableEdgeToEdge()
+
+        setContent { MainPage() }
     }
 }

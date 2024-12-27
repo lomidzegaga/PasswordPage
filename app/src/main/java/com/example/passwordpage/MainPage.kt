@@ -2,7 +2,6 @@ package com.example.passwordpage
 
 import android.widget.Toast
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.layout.Arrangement
@@ -11,7 +10,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -19,10 +20,10 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -37,63 +38,72 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.passwordpage.composables.TextField
 
 @Composable
 fun MainPage() {
 
-    var currentProgress by remember { mutableFloatStateOf(0f) }
-    val progress by animateFloatAsState(
-        targetValue = currentProgress,
-        label = "",
-        animationSpec = spring(stiffness = 50f)
-    )
+    var password by remember { mutableStateOf("") }
+    val onPasswordChange = remember { { newPassword: String -> password = newPassword } }
 
-    val buttonContainerColor by animateColorAsState(
-        targetValue = if (currentProgress == 1f) Color(0xFF191AE5) else Color.Gray,
-        label = "",
-        animationSpec = spring(stiffness = 40f)
-    )
+    var indicatorCurrentProgress by remember { mutableFloatStateOf(0f) }
+    val isButtonEnabled = remember { derivedStateOf { indicatorCurrentProgress == 1f } }
 
-    val buttonTextColor by animateColorAsState(
-        targetValue = if (currentProgress == 1f) Color.White else Color.Black,
-        label = "",
-        animationSpec = spring(stiffness = 50f)
-    )
-
-    val (password, enterPassword) = remember { mutableStateOf("") }
     val context = LocalContext.current
 
-    fun updateProgress(newPassword: String) {
-        val containsLetters = newPassword.containsLetters()
-        val containsNumbers = newPassword.containsNumbers()
-        val containsSymbols = newPassword.containsSymbols()
-        val isLengthGreaterThan8 = newPassword.length >= 8
+    val progress by animateFloatAsState(
+        targetValue = indicatorCurrentProgress,
+        label = "progress",
+        animationSpec = spring(stiffness = 50f)
+    )
 
-        val changes = listOf(
-            containsLetters to password.containsLetters(),
-            containsNumbers to password.containsNumbers(),
-            containsSymbols to password.containsSymbols(),
-            isLengthGreaterThan8 to (password.length >= 8)
+    val buttonContainerColor by remember(indicatorCurrentProgress) {
+        derivedStateOf {
+            if (indicatorCurrentProgress == 1f) Color(0xFF191AE5) else Color.Gray
+        }
+    }.let { targetColor ->
+        animateColorAsState(
+            targetValue = targetColor.value,
+            label = "button container color",
+            animationSpec = spring(stiffness = 40f)
         )
+    }
 
-        val addedChanges = changes.count { (newVal, oldVal) -> newVal && !oldVal }
-        val removedChanges = changes.count { (newVal, oldVal) -> !newVal && oldVal }
+    val buttonTextColor by animateColorAsState(
+        targetValue = if (indicatorCurrentProgress == 1f) Color.White else Color.Black,
+        label = "buttonTextColor",
+        animationSpec = spring(stiffness = 50f)
+    )
 
-        currentProgress += (addedChanges - removedChanges) * 0.25f
+    LaunchedEffect(key1 = password) {
+        val conditions = listOf(
+            password.containsLetters(),
+            password.containsNumbers(),
+            password.containsSymbols(),
+            password.length >= 8
+        ).count { it }
+
+        indicatorCurrentProgress = conditions * 0.25f
     }
 
     Column(
         modifier = Modifier
-            .fillMaxSize(),
+            .fillMaxSize()
+            .navigationBarsPadding()
+            .systemBarsPadding(),
         verticalArrangement = Arrangement.Top
     ) {
         Icon(
             imageVector = Icons.Default.ArrowBack,
             contentDescription = null,
             modifier = Modifier
-                .padding(start = 20.dp, top = 25.dp)
+                .padding(
+                    start = 20.dp,
+                    top = 25.dp
+                )
         )
         Spacer(modifier = Modifier.height(30.dp))
+
         Text(
             text = "Create a password",
             fontWeight = FontWeight.Bold,
@@ -103,6 +113,7 @@ fun MainPage() {
             textAlign = TextAlign.Center
         )
         Spacer(modifier = Modifier.height(14.dp))
+
         Text(
             text = "Use at least 8 characters with a mix of letters, \n numbers & symbols",
             color = Color.Black,
@@ -111,25 +122,13 @@ fun MainPage() {
             fontSize = 17.sp
         )
         Spacer(modifier = Modifier.height(20.dp))
-        OutlinedTextField(
-            value = password,
-            onValueChange = {
-                updateProgress(it)
-                enterPassword.invoke(it)
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp),
-            label = { Text(text = "Password") },
-            shape = RoundedCornerShape(14.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = Color.Black,
-                unfocusedBorderColor = Color.Black,
-                focusedLabelColor = Color.Black,
-                unfocusedLabelColor = Color.Black
-            )
+
+        TextField(
+            password = { password },
+            onPasswordChange = onPasswordChange
         )
         Spacer(modifier = Modifier.height(20.dp))
+
         LinearProgressIndicator(
             progress = progress,
             modifier = Modifier
@@ -141,6 +140,7 @@ fun MainPage() {
             trackColor = Color(0xFFDCDBE5)
         )
         Spacer(modifier = Modifier.height(30.dp))
+
         Button(
             onClick = {
                 Toast.makeText(context, "You made it!!!", Toast.LENGTH_LONG).show()
@@ -148,8 +148,8 @@ fun MainPage() {
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 17.dp),
-            enabled = currentProgress == 1f,
-            shape = RoundedCornerShape(11.dp),
+            enabled = isButtonEnabled.value,
+            shape = RoundedCornerShape(20),
             colors = ButtonDefaults.buttonColors(
                 containerColor = buttonContainerColor
             )
